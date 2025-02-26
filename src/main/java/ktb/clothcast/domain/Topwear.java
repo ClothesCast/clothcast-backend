@@ -9,20 +9,18 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class Bottoms {
+public class Topwear {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long bottomId;
+    private Long topId;
 
-    private String denimPants;
-    private String cottonPants;
-    private String shortPants;
-    private String slacks;
-    private String miniSkirt;
-    private String longSkirt;
+    private Boolean knit;
+    private Boolean mantoman;
+    private Boolean hoodt;
+    private Boolean shirt;
 
     @ManyToOne
     @JoinColumn(name = "userId", nullable = false)
-    private Users users;
+    private User user;
 }
