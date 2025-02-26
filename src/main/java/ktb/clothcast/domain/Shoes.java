@@ -15,12 +15,12 @@ public class Shoes {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long shoesId;
 
-    private String sneakers;
-    private String boots;
-    private String sandals;
-    private String sportsShoes;
+    private Boolean sneakers;
+    private Boolean boots;
+    private Boolean sandals;
+    private Boolean sportsShoes;
 
     @ManyToOne
     @JoinColumn(name = "userId", nullable = false)
-    private Users users;
+    private User user;
 }
