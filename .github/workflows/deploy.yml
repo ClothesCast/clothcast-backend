@@ -1,0 +1,68 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ 코드 체크아웃
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2️⃣ Java 21 & Node.js 18 설치
+      - name: Set up Java and Node.js
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # 3️⃣ 백엔드 빌드 (Spring Boot)
+      - name: Build Spring Boot Application
+        run: |
+          cd backend
+          ./gradlew build -x test
+          cp build/libs/*.jar app.jar
+
+      # 4️⃣ 프론트엔드 빌드 (React)
+      - name: Build React Application
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+      # 5️⃣ EC2로 배포 파일 전송
+      - name: Deploy to EC2
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          source: "backend/app.jar,frontend/build/*"
+          target: "~/deploy"
+
+      # 6️⃣ EC2에서 실행 스크립트 실행
+      - name: Restart Backend and Frontend
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script: |
+            # 백엔드 실행
+            pkill -f 'java -jar' || true
+            nohup java -jar ~/deploy/app.jar > ~/deploy/backend.log 2>&1 &
+
+            # 프론트엔드 배포 (Nginx)
+            sudo rm -rf /var/www/html/*
+            sudo cp -r ~/deploy/build/* /var/www/html/
+            sudo systemctl restart nginx
