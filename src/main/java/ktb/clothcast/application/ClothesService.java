@@ -8,17 +8,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Service
 public class ClothesService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClothesService.class);
-    private static final AtomicLong lastUsedUserId = new AtomicLong(0);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private UserRepository userRepository;
@@ -43,14 +43,14 @@ public class ClothesService {
 
     @Transactional
     public Map<String, Object> saveUserDataAndGetRecommendation(RecommendationRequest request) {
-        logger.info("Received request: {}", request);
+        logJson("Received request", request);
 
         if (request.getOwnedClothes() == null) {
             throw new IllegalArgumentException("ownedClothes가 null입니다. 요청을 확인하세요!");
         }
 
         // 1. 다음 유저 가져오기 (매 실행마다 ID 증가)
-        User user = findNextUser();
+        User user = createNewUser();
         logger.info("선택된 사용자 ID: {}", user.getUserId());
 
         // 2. 보유한 옷 정보 저장
@@ -58,43 +58,32 @@ public class ClothesService {
 
         // 3. 날씨 정보 가져오기
         Map<String, Object> weatherData = fetchWeatherData(request);
-        logger.info("변환된 날씨 데이터: {}", weatherData);
+        logJson("변환된 날씨 데이터", weatherData);
 
         // 4. AI 서버 요청 데이터 준비
         Map<String, Object> aiRequestData = prepareAiRequestData(request, user, weatherData);
-        logger.info("AI 서버로 전송할 데이터: {}", aiRequestData);
+        logJson("AI 서버로 전송할 데이터", aiRequestData);
 
         // 5. AI 서버 요청 후 추천 결과 받기
         String recommendation = fetchAiRecommendation(aiRequestData);
-        logger.info("최종 응답 데이터: {}", recommendation);
+        logJson("최종 응답 데이터", recommendation);
 
-        return Map.of("recommendation", recommendation);
+        return Map.of("recommendation", recommendation, "weather", weatherData);
     }
 
-    // 실행할 때마다 userId 증가시키면서 기존 DB에서 가져오기
-    private User findNextUser() {
-        long updatedUserId = lastUsedUserId.incrementAndGet();
-
-        // 최대 1000명의 유저가 있다고 가정하고, ID가 1000을 넘으면 다시 1로 순환
-        if (updatedUserId > 1000) {
-            updatedUserId = 1;
-            lastUsedUserId.set(1);
+    private void logJson(String message, Object data) {
+        try {
+            String jsonData = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
+            logger.info("{}: {}", message, jsonData);
+        } catch (JsonProcessingException e) {
+            logger.error("JSON 변환 중 오류 발생", e);
         }
-
-        final long finalUserId = updatedUserId; // 람다 내부에서 사용할 변수로 복사
-
-        // ID에 해당하는 유저 가져오기
-        return userRepository.findById(finalUserId)
-                .orElseThrow(() -> new IllegalStateException("User ID " + finalUserId + " not found in database"));
     }
 
-    // 사용자 조회 또는 생성
-    private User findOrCreateUser() {
-        return userRepository.findById(1L).orElseGet(() -> {
-            User newUser = new User();
-            newUser.setUsername("testUser"); // 임시 사용자 (실제 로그인 연동 필요)
-            return userRepository.save(newUser);
-        });
+    private User createNewUser() {
+        User newUser = new User();
+        newUser.setUsername("user_" + System.currentTimeMillis()); // 임시 사용자명
+        return userRepository.save(newUser);
     }
 
     // 보유한 옷 정보 저장
@@ -116,14 +105,15 @@ public class ClothesService {
     // AI 서버 요청 데이터 준비
     private Map<String, Object> prepareAiRequestData(RecommendationRequest request, User user, Map<String, Object> weatherData) {
         Map<String, Object> filteredOwnedClothes = getUserOwnedClothes(user);
-        logger.info("AI 서버로 보낼 보유 옷 데이터 (필터링 후): {}", filteredOwnedClothes);
-
-        return Map.of(
+        logJson("AI 서버로 보낼 보유 옷 데이터 (필터링 후)", filteredOwnedClothes);
+        Map<String, Object> aiRequestData = Map.of(
                 "style", request.getStyle(),
                 "location", request.getLocation(),
                 "ownedClothes", filteredOwnedClothes,
                 "weather", weatherData
         );
+        logJson("AI 요청 데이터 최종 형태", aiRequestData);
+        return aiRequestData;
     }
 
     // AI 서버 요청 후 추천 결과 받기
