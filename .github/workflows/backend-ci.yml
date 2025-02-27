@@ -18,6 +18,6 @@ jobs:
 
       - name: Build and push backend image
         run: |
-          cd clothcast_backend
+          cd Dockerfile
           docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/clothcast_backend:latest .
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/clothcast_backend:latest
