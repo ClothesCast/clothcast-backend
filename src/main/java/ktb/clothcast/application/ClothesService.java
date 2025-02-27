@@ -70,10 +70,13 @@ public class ClothesService {
         logger.info("변환된 날씨 데이터: {}", weatherData);
 
         // 4️⃣ AI 서버로 보낼 데이터 구성
+        Map<String, Object> filteredOwnedClothes = getUserOwnedClothes(user); // 필터링된 값 사용
+        logger.info("AI 서버로 보낼 보유 옷 데이터 (필터링 후): {}", filteredOwnedClothes);
+
         Map<String, Object> aiRequestData = Map.of(
                 "style", request.getStyle(),
                 "location", request.getLocation(),
-                "ownedClothes", request.getOwnedClothes(),
+                "ownedClothes", filteredOwnedClothes,
                 "weather", weatherData
         );
 
