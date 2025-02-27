@@ -28,7 +28,7 @@ jobs:
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}clothcast_backend:latest
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/clothcast_backend:latest
             docker stop clothcast_backend || true
             docker rm clothcast_backend || true
             docker run -d --name clothcast_backend -p 8080:8080 ${{ secrets.DOCKERHUB_USERNAME }}/clothcast_backend:latest
