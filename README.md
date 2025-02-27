@@ -1,2 +1,2 @@
 # clothcast-backend
-clothcast 백엔드 레포입니다.
+clothcast 백엔드 레포지토리입니다.
