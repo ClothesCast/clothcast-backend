@@ -1,0 +1,40 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches:
+      - main  # main 브랜치에 push될 때 실행
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+
+      - name: Build and Push Backend Image
+        run: |
+          cd backend
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/backend:latest .
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/backend:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build_and_push  # 빌드 완료 후 실행
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker stop backend || true
+            docker rm backend || true
+            docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/backend:latest
+            docker run -d --name backend -p 8080:8080 --restart always ${{ secrets.DOCKER_HUB_USERNAME }}/backend:latest
