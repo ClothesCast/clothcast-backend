@@ -11,12 +11,14 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Service
 public class ClothesService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClothesService.class);
+    private static final AtomicLong lastUsedUserId = new AtomicLong(0);
 
     @Autowired
     private UserRepository userRepository;
@@ -47,8 +49,9 @@ public class ClothesService {
             throw new IllegalArgumentException("ownedClothes가 null입니다. 요청을 확인하세요!");
         }
 
-        // 1. 사용자 조회 또는 생성
-        User user = findOrCreateUser();
+        // 1. 다음 유저 가져오기 (매 실행마다 ID 증가)
+        User user = findNextUser();
+        logger.info("선택된 사용자 ID: {}", user.getUserId());
 
         // 2. 보유한 옷 정보 저장
         saveOwnedClothes(request, user);
@@ -66,6 +69,23 @@ public class ClothesService {
         logger.info("최종 응답 데이터: {}", recommendation);
 
         return Map.of("recommendation", recommendation);
+    }
+
+    // 실행할 때마다 userId 증가시키면서 기존 DB에서 가져오기
+    private User findNextUser() {
+        long updatedUserId = lastUsedUserId.incrementAndGet();
+
+        // 최대 1000명의 유저가 있다고 가정하고, ID가 1000을 넘으면 다시 1로 순환
+        if (updatedUserId > 1000) {
+            updatedUserId = 1;
+            lastUsedUserId.set(1);
+        }
+
+        final long finalUserId = updatedUserId; // 람다 내부에서 사용할 변수로 복사
+
+        // ID에 해당하는 유저 가져오기
+        return userRepository.findById(finalUserId)
+                .orElseThrow(() -> new IllegalStateException("User ID " + finalUserId + " not found in database"));
     }
 
     // 사용자 조회 또는 생성
