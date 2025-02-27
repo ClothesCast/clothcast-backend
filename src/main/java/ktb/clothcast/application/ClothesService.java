@@ -6,12 +6,12 @@ import ktb.clothcast.dao.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ClothesService {
@@ -47,114 +47,119 @@ public class ClothesService {
             throw new IllegalArgumentException("ownedClothes가 null입니다. 요청을 확인하세요!");
         }
 
-        // 1️⃣ 사용자 저장 또는 조회
-        Optional<User> existingUser = userRepository.findById(1L);
-        User user = existingUser.orElseGet(() -> {
+        // 1. 사용자 조회 또는 생성
+        User user = findOrCreateUser();
+
+        // 2. 보유한 옷 정보 저장
+        saveOwnedClothes(request, user);
+
+        // 3. 날씨 정보 가져오기
+        Map<String, Object> weatherData = fetchWeatherData(request);
+        logger.info("변환된 날씨 데이터: {}", weatherData);
+
+        // 4. AI 서버 요청 데이터 준비
+        Map<String, Object> aiRequestData = prepareAiRequestData(request, user, weatherData);
+        logger.info("AI 서버로 전송할 데이터: {}", aiRequestData);
+
+        // 5. AI 서버 요청 후 추천 결과 받기
+        String recommendation = fetchAiRecommendation(aiRequestData);
+        logger.info("최종 응답 데이터: {}", recommendation);
+
+        return Map.of("recommendation", recommendation);
+    }
+
+    // 사용자 조회 또는 생성
+    private User findOrCreateUser() {
+        return userRepository.findById(1L).orElseGet(() -> {
             User newUser = new User();
             newUser.setUsername("testUser"); // 임시 사용자 (실제 로그인 연동 필요)
             return userRepository.save(newUser);
         });
+    }
 
-        // 2️⃣ 보유한 옷 정보 저장
+    // 보유한 옷 정보 저장
+    private void saveOwnedClothes(RecommendationRequest request, User user) {
         saveTopwear(request.getOwnedClothes().getTopwear(), user);
         saveBottomwear(request.getOwnedClothes().getBottomwear(), user);
         saveOuterwear(request.getOwnedClothes().getOuterwear(), user);
         saveShoes(request.getOwnedClothes().getShoes(), user);
+    }
 
-        // 3️⃣ 날씨 정보 가져오기
-        Map<String, Object> weatherData = weatherService.getWeather(
+    // 날씨 정보 가져오기
+    private Map<String, Object> fetchWeatherData(RecommendationRequest request) {
+        return weatherService.getWeather(
                 request.getLocation().getLatitude(),
                 request.getLocation().getLongitude()
         );
+    }
 
-        logger.info("변환된 날씨 데이터: {}", weatherData);
-
-        // 4️⃣ AI 서버로 보낼 데이터 구성
-        Map<String, Object> filteredOwnedClothes = getUserOwnedClothes(user); // 필터링된 값 사용
+    // AI 서버 요청 데이터 준비
+    private Map<String, Object> prepareAiRequestData(RecommendationRequest request, User user, Map<String, Object> weatherData) {
+        Map<String, Object> filteredOwnedClothes = getUserOwnedClothes(user);
         logger.info("AI 서버로 보낼 보유 옷 데이터 (필터링 후): {}", filteredOwnedClothes);
 
-        Map<String, Object> aiRequestData = Map.of(
+        return Map.of(
                 "style", request.getStyle(),
                 "location", request.getLocation(),
                 "ownedClothes", filteredOwnedClothes,
                 "weather", weatherData
         );
+    }
 
-        logger.info("AI 서버로 전송할 데이터: {}", aiRequestData);
-
-        // 5️⃣ AI 서버로 요청하여 추천 결과 받기
-        String recommendation = aiService.getClothingRecommendation(aiRequestData);
-
-        logger.info("최종 응답 데이터: {}", recommendation);
-
-        // 최종 응답 반환
-        return Map.of(
-                "recommendation", recommendation
-        );
+    // AI 서버 요청 후 추천 결과 받기
+    private String fetchAiRecommendation(Map<String, Object> aiRequestData) {
+        return aiService.getClothingRecommendation(aiRequestData);
     }
 
     // DB에서 사용자가 보유한 옷 중 True 값만 필터링하여 반환
     private Map<String, Object> getUserOwnedClothes(User user) {
-        Map<String, Boolean> topwear = topwearRepository.findByUser(user)
-                .map(t -> Map.of(
-                        "knit", Boolean.TRUE.equals(t.getKnit()),
-                        "mantoman", Boolean.TRUE.equals(t.getMantoman()),
-                        "hoodt", Boolean.TRUE.equals(t.getHoodt()),
-                        "shirt", Boolean.TRUE.equals(t.getShirt())
-                ))
-                .orElse(Map.of());
-
-        Map<String, Boolean> bottomwear = bottomwearRepository.findByUser(user)
-                .map(b -> Map.of(
-                        "denimPants", Boolean.TRUE.equals(b.getDenimPants()),
-                        "cottonPants", Boolean.TRUE.equals(b.getCottonPants()),
-                        "shortPants", Boolean.TRUE.equals(b.getShortPants()),
-                        "slacks", Boolean.TRUE.equals(b.getSlacks()),
-                        "miniSkirt", Boolean.TRUE.equals(b.getMiniSkirt()),
-                        "longSkirt", Boolean.TRUE.equals(b.getLongSkirt())
-                ))
-                .orElse(Map.of());
-
-        Map<String, Boolean> outerwear = outerwearRepository.findByUser(user)
-                .map(o -> Map.of(
-                        "shortPadding", Boolean.TRUE.equals(o.getShortPadding()),
-                        "longPadding", Boolean.TRUE.equals(o.getLongPadding()),
-                        "coat", Boolean.TRUE.equals(o.getCoat()),
-                        "leatherJacket", Boolean.TRUE.equals(o.getLeatherJacket()),
-                        "cardigan", Boolean.TRUE.equals(o.getCardigan()),
-                        "hoodZipUp", Boolean.TRUE.equals(o.getHoodZipUp())
-                ))
-                .orElse(Map.of());
-
-        Map<String, Boolean> shoes = shoesRepository.findByUser(user)
-                .map(s -> Map.of(
-                        "sneakers", Boolean.TRUE.equals(s.getSneakers()),
-                        "boots", Boolean.TRUE.equals(s.getBoots()),
-                        "sandals", Boolean.TRUE.equals(s.getSandals()),
-                        "sportsShoes", Boolean.TRUE.equals(s.getSportsShoes())
-                ))
-                .orElse(Map.of());
-
-        // ✅ True 값만 필터링하여 반환
         return Map.of(
-                "topwear", topwear.entrySet().stream()
-                        .filter(Map.Entry::getValue)
-                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)),
+                "topwear", filterTrueValues(topwearRepository.findByUser(user)
+                        .map(t -> Map.of(
+                                "knit", t.getKnit(),
+                                "mantoman", t.getMantoman(),
+                                "hoodt", t.getHoodt(),
+                                "shirt", t.getShirt()
+                        )).orElse(Map.of())),
 
-                "bottomwear", bottomwear.entrySet().stream()
-                        .filter(Map.Entry::getValue)
-                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)),
+                "bottomwear", filterTrueValues(bottomwearRepository.findByUser(user)
+                        .map(b -> Map.of(
+                                "denimPants", b.getDenimPants(),
+                                "cottonPants", b.getCottonPants(),
+                                "shortPants", b.getShortPants(),
+                                "slacks", b.getSlacks(),
+                                "miniSkirt", b.getMiniSkirt(),
+                                "longSkirt", b.getLongSkirt()
+                        )).orElse(Map.of())),
 
-                "outerwear", outerwear.entrySet().stream()
-                        .filter(Map.Entry::getValue)
-                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)),
+                "outerwear", filterTrueValues(outerwearRepository.findByUser(user)
+                        .map(o -> Map.of(
+                                "shortPadding", o.getShortPadding(),
+                                "longPadding", o.getLongPadding(),
+                                "coat", o.getCoat(),
+                                "leatherJacket", o.getLeatherJacket(),
+                                "cardigan", o.getCardigan(),
+                                "hoodZipUp", o.getHoodZipUp()
+                        )).orElse(Map.of())),
 
-                "shoes", shoes.entrySet().stream()
-                        .filter(Map.Entry::getValue)
-                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                "shoes", filterTrueValues(shoesRepository.findByUser(user)
+                        .map(s -> Map.of(
+                                "sneakers", s.getSneakers(),
+                                "boots", s.getBoots(),
+                                "sandals", s.getSandals(),
+                                "sportsShoes", s.getSportsShoes()
+                        )).orElse(Map.of()))
         );
     }
 
+    // True 값만 필터링
+    private Map<String, Boolean> filterTrueValues(Map<String, Boolean> clothes) {
+        return clothes.entrySet().stream()
+                .filter(Map.Entry::getValue)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    // 각 카테고리별 보유한 옷 저장 메서드
     private void saveTopwear(Map<String, Boolean> topwearData, User user) {
         if (topwearData != null) {
             Topwear topwear = new Topwear();
