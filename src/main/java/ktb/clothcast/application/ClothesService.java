@@ -68,7 +68,8 @@ public class ClothesService {
         String recommendation = fetchAiRecommendation(aiRequestData);
         logJson("최종 응답 데이터", recommendation);
 
-        return Map.of("recommendation", recommendation, "weather", weatherData);
+//        return Map.of("recommendation", recommendation, "weather", weatherData);
+        return Map.of("recommendation", recommendation);
     }
 
     private void logJson(String message, Object data) {
