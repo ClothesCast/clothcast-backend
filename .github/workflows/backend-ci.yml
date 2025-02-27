@@ -3,7 +3,8 @@ name: Build and Push Backend Docker Image
 on:
   push:
     branches:
-      - dev  # dev  브랜치에 push하면 실행
+      - dev
+      - main # push하면 실행
 
 jobs:
   build_and_push:
