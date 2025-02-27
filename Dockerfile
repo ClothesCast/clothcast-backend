@@ -1,20 +1,23 @@
 # 1. OpenJDK 21 기반으로 빌드
 FROM eclipse-temurin:21 AS build
 WORKDIR /app
-COPY mvnw pom.xml ./
-COPY . .
-RUN ./mvnw clean package -DskipTests
+
+# Gradle Wrapper 및 프로젝트 파일 복사
+COPY gradlew build.gradle settings.gradle ./
+COPY gradle/ gradle/
+COPY src/ src/
+
+# 실행 권한 추가 및 빌드 수행
+RUN chmod +x gradlew
+RUN ./gradlew build -x test
 
 # 2. 실행 컨테이너 설정
 FROM eclipse-temurin:21
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
 
-# 3. 환경 변수 설정 (MySQL RDS 연결)
-ENV SPRING_DATASOURCE_URL=jdbc:mysql://clothcast-db.cjqkwkquga8t.ap-northeast-2.rds.amazonaws.com:3306/clothcast_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-ENV SPRING_DATASOURCE_USERNAME=admin
-ENV SPRING_DATASOURCE_PASSWORD=admin1234!!
-ENV SPRING_PROFILES_ACTIVE=production
+# 빌드된 JAR 파일 복사
+COPY --from=build /app/build/libs/*.jar app.jar
 
+# 3. 환경 변수는 Dockerfile에서 직접 설정하지 않고, 외부에서 제공
 EXPOSE 8080
 CMD ["java", "-jar", "app.jar"]
