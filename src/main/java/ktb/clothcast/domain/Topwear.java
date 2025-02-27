@@ -19,6 +19,8 @@ public class Topwear {
     private Boolean mantoman;
     private Boolean hoodt;
     private Boolean shirt;
+    private Boolean sleevelessT;
+    private Boolean shortSleeveT;
 
     @ManyToOne
     @JoinColumn(name = "userId", nullable = false)
