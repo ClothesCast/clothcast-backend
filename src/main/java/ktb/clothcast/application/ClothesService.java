@@ -86,7 +86,6 @@ public class ClothesService {
 
         // 최종 응답 반환
         return Map.of(
-                "weather", weatherData,
                 "recommendation", recommendation
         );
     }
