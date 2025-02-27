@@ -3,7 +3,7 @@ name: Deploy Backend to EC2
 on:
   push:
     branches:
-      - main  # main 브랜치에 push하면 실행
+      - dev  # dev 브랜치에 push하면 실행
 
 jobs:
   deploy:
@@ -17,8 +17,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # 기존 컨테이너 종료 및 삭제
-            docker stop backend || true
-            docker rm backend || true
+            docker stop clothcast_backend || true
+            docker rm clothcast_backend || true
 
             # 최신 이미지 가져오기
             docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/clothcast_backend:latest
