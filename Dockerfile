@@ -11,7 +11,7 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
 # 3. 환경 변수 설정 (MySQL RDS 연결)
-ENV SPRING_DATASOURCE_URL=jdbc:mysql://clothcast-db.cnokm2w0uwtf.us-east-1.rds.amazonaws.com:3306/clothcast_db
+ENV SPRING_DATASOURCE_URL=jdbc:mysql://clothcast-db.cjqkwkquga8t.ap-northeast-2.rds.amazonaws.com:3306/clothcast_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
 ENV SPRING_DATASOURCE_USERNAME=admin
 ENV SPRING_DATASOURCE_PASSWORD=admin1234!!
 ENV SPRING_PROFILES_ACTIVE=production
