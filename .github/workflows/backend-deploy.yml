@@ -24,6 +24,6 @@ jobs:
             docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/clothcast_backend:latest
 
             # 새 컨테이너 실행
-            docker run -d --name backend -p 8080:8080 --restart always \
+            docker run -d --name clothcast_backend -p 8080:8080 --restart always \
               -e SPRING_PROFILES_ACTIVE=production \
               ${{ secrets.DOCKER_HUB_USERNAME }}/clothcast_backend:latest
