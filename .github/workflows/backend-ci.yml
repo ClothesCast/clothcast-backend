@@ -1,0 +1,23 @@
+name: Build and Push Backend Docker Image
+
+on:
+  push:
+    branches:
+      - main  # main 브랜치에 push하면 실행
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+
+      - name: Build and push backend image
+        run: |
+          cd backend
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/backend:latest .
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/backend:latest
