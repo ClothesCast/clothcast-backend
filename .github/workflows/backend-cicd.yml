@@ -28,7 +28,28 @@ jobs:
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/clothcast_backend:latest
+            cd /home/ubuntu/app
+
+            # .env 파일 자동 생성 
+            echo "AI_SERVER_URL=${{ secrets.AI_SERVER_URL }}" > .env
+            echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+            echo "LOCAL_DB_HOST=${{ secrets.LOCAL_DB_HOST }}" >> .env
+            echo "LOCAL_DB_NAME=${{ secrets.LOCAL_DB_NAME }}" >> .env
+            echo "LOCAL_DB_USER=${{ secrets.LOCAL_DB_USER }}" >> .env
+            echo "LOCAL_DB_PASSWORD=${{ secrets.LOCAL_DB_PASSWORD }}" >> .env
+            echo "OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}" >> .env
+            echo "RDS_DB_HOST=${{ secrets.RDS_DB_HOST }}" >> .env
+            echo "RDS_DB_NAME=${{ secrets.RDS_DB_NAME }}" >> .env
+            echo "RDS_DB_USER=${{ secrets.RDS_DB_USER }}" >> .env
+            echo "RDS_DB_PASSWORD=${{ secrets.RDS_DB_PASSWORD }}" >> .env
+            echo "SECURITY_USER_NAME=${{ secrets.SECURITY_USER_NAME }}" >> .env
+            echo "SECURITY_USER_PASSWORD=${{ secrets.SECURITY_USER_PASSWORD }}" >> .env
+
+            # 기존 컨테이너 중지 및 삭제 
             docker stop clothcast_backend || true
             docker rm clothcast_backend || true
-            docker run -d --name clothcast_backend -p 8080:8080 ${{ secrets.DOCKERHUB_USERNAME }}/clothcast_backend:latest
+            docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/clothcast_backend:latest || true
+
+            # 최신 이미지 Pull 후 실행
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/clothcast_backend:latest
+            docker run -d --name clothcast_backend -p 8080:8080 --env-file .env ${{ secrets.DOCKERHUB_USERNAME }}/clothcast_backend:latest
