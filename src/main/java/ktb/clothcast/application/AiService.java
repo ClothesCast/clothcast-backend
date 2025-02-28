@@ -11,7 +11,7 @@ import java.util.Map;
 @Service
 public class AiService {
 
-    @Value("${ai.server.url}")  // application.properties에서 AI 서버 URL 설정
+    @Value("${ai.server.url}")
     private String aiServerUrl;
 
     private final RestTemplate restTemplate;

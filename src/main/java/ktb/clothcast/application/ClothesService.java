@@ -66,10 +66,8 @@ public class ClothesService {
 
         // 5. AI 서버 요청 후 추천 결과 받기
         String recommendation = fetchAiRecommendation(aiRequestData);
-//        String recommendation = "테스트용";
         logJson("최종 응답 데이터", recommendation);
 
-//        return Map.of("recommendation", recommendation, "weather", weatherData);
         return Map.of("recommendation", recommendation);
     }
 
