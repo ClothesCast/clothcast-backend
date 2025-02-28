@@ -19,7 +19,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html",
                                 "/webjars/**",
-                                "/actuator/**"  // 추가적인 Swagger 관련 리소스 허용
+                                "/actuator/**",
+                                "/","/loading","/error"// 추가적인 Swagger 관련 리소스 허용
                         ).permitAll()
                         .anyRequest().permitAll() // 모든 요청을 인증 없이 허용
                 )
